@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Celebration</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            background: radial-gradient(circle at center, #0a0412 0%, #1a0b2e 100%);
+            color: #fdf5e6; font-family: 'Segoe UI', sans-serif;
+            margin: 0; min-height: 100vh; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center;
+            overflow-y: auto; 
+            overflow-x: hidden;
+            perspective: 1500px;
+            padding: 40px 20px;
+        }
+
+        /* --- SPARKS TRAIL CANVAS --- */
+        #trailCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 999999;
+        }
+
+        /* --- INTRO STYLES --- */
+        .intro-container { text-align: center; transition: opacity 0.8s; z-index: 10; position: relative; }
+        .greeting-title { font-size: 3rem; margin-bottom: 1rem; color: #ffb3c1; text-shadow: 0 0 10px rgba(255,179,193,0.5); }
+        .rose-container { width: 200px; height: 200px; position: relative; margin: 0 auto 3rem auto; }
+        .petal { position: absolute; background: linear-gradient(135deg, #ff477e, #ff85a1); border-radius: 50% 50% 20% 50%; width: 80px; height: 80px; }
+        .p1 { top: 20px; left: 60px; transform: rotate(45deg); }
+        .p2 { top: 50px; left: 30px; transform: rotate(15deg); }
+        .p3 { top: 50px; left: 90px; transform: rotate(75deg); }
+        .p4 { top: 80px; left: 60px; transform: rotate(45deg); }
+        .stem { position: absolute; width: 8px; height: 60px; background: #2d5a27; bottom: 20px; left: 96px; z-index: -1; }
+        .leaf { position: absolute; width: 30px; height: 20px; background: #2d5a27; border-radius: 0 100% 0 100%; bottom: 40px; left: 104px; }
+        
+        /* --- BUTTON EXPLOSIONS --- */
+        .btn-wrapper { position: relative; display: inline-block; padding: 20px; }
+        .celebration-btn { padding: 20px 50px; font-size: 1.5rem; background: #ff477e; color: white; border: none; border-radius: 50px; cursor: pointer; transition: 0.3s; box-shadow: 0 0 20px rgba(255,71,126,0.5); position: relative; z-index: 2; }
+        .celebration-btn:hover { transform: scale(1.05); background: #ff5c8d; }
+
+        .ambient-emoji {
+            position: absolute; pointer-events: none; font-size: 1.4rem; z-index: 1;
+            bottom: 30px; left: 50%; transform: translateX(-50%); opacity: 0;
+            animation: ambient-float var(--d) ease-in-out infinite;
+        }
+        @keyframes ambient-float {
+            0% { transform: translate(-50%, 0) scale(0.6); opacity: 0; }
+            20% { opacity: 0.7; }
+            100% { transform: translate(calc(-50% + var(--x)), var(--y)) scale(1.1) rotate(var(--r)); opacity: 0; }
+        }
+
+        .burst-emoji {
+            position: absolute; pointer-events: none; font-size: 2rem; z-index: 3;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            animation: emoji-explode 0.9s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+        }
+        @keyframes emoji-explode {
+            0% { transform: translate(-50%, -50%) scale(0.3); opacity: 1; }
+            100% { transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1.3) rotate(var(--r)); opacity: 0; }
+        }
+
+        /* --- DASHBOARD STYLES --- */
+        #dashboard { display: none; opacity: 0; transition: opacity 1s ease; text-align: center; width: 100%; }
+        #emojiCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1; }
+        .dashboard-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 30px; position: relative; z-index: 5; }
+        .dashboard-layout { display: flex; justify-content: center; align-items: center; gap: 60px; transform-style: preserve-3d; position: relative; z-index: 5; }
+        
+        .column { display: flex; flex-direction: column; gap: 35px; transform-style: preserve-3d; }
+        .left-col { transform: rotateY(15deg); }
+        .right-col { transform: rotateY(-15deg); }
+        .center-col { display: flex; flex-direction: column; align-items: center; gap: 35px; z-index: 20; }
+
+        .float-wrapper { position: relative; transform-style: preserve-3d; animation: float-card 5s ease-in-out infinite; }
+        .column .float-wrapper:nth-child(1) { animation-delay: 0s; }
+        .column .float-wrapper:nth-child(2) { animation-delay: -1.5s; }
+
+        @keyframes float-card {
+            0%, 100% { transform: translateY(0) rotateX(0deg); }
+            50% { transform: translateY(-15px) rotateX(3deg); }
+        }
+
+        .letter-card {
+            position: relative; width: 260px; height: 110px;
+            background: linear-gradient(135deg, rgba(255, 71, 126, 0.15) 0%, rgba(26, 11, 46, 0.8) 100%);
+            border: 2px solid rgba(255, 133, 161, 0.4); border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(255, 71, 126, 0.2); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center; gap: 12px; padding: 15px;
+            cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform-style: preserve-3d;
+        }
+        .letter-card:hover { transform: scale(1.08) translateZ(20px); border-color: #ff477e; box-shadow: 0 15px 45px rgba(255, 71, 126, 0.5); }
+        .card-title { font-size: 1.05rem; font-weight: 600; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .card-icon { font-size: 1.6rem; filter: drop-shadow(0 2px 8px rgba(255,71,126,0.4)); }
+
+        .next-btn-container { position: relative; }
+        .next-part-btn { padding: 12px 30px; font-size: 1rem; background: #ff85a1; color: #1a0b2e; border: none; border-radius: 30px; cursor: pointer; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 20px rgba(255,133,161,0.5); white-space: nowrap; }
+        .next-part-btn:hover { background: #ff477e; color: white; transform: scale(1.05); }
+
+        /* --- PART 5 SCREEN STYLES --- */
+        #part5 {
+            display: none; opacity: 0; transition: opacity 1s ease;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #020005;
+            z-index: 999999; overflow: hidden; align-items: center; justify-content: center;
+        }
+
+        #galaxyCanvas5 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .bouquet-container {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s ease, filter 0.3s ease;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .bouquet-container::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 520px;
+            height: 520px;
+            background: radial-gradient(circle, rgba(255, 105, 180, 0.85) 0%, rgba(255, 20, 147, 0.45) 40%, transparent 75%);
+            border-radius: 50%;
+            z-index: -1;
+            filter: blur(40px);
+            animation: pinkAuraPulse 4s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+
+        @keyframes pinkAuraPulse {
+            0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
+            100% { transform: translate(-50%, -50%) scale(1.25); opacity: 1; }
+        }
+
+        .bouquet-container:hover {
+            transform: scale(1.05);
+            filter: drop-shadow(0 0 30px rgba(255, 182, 193, 0.9));
+        }
+
+        .bouquet-img {
+            width: 480px;
+            max-width: 90vw;
+            height: auto;
+            border-radius: 16px;
+            filter: drop-shadow(0 0 25px rgba(255, 105, 180, 0.5));
+        }
+
+        .click-hint {
+            color: #ffb6c1;
+            margin-top: 15px;
+            font-size: 1.1rem;
+            letter-spacing: 1.5px;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+            animation: pulse 2s infinite;
+        }
+
+        .bouquet-bubble {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            font-size: 1.6rem;
+            pointer-events: none;
+            z-index: 12;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.3);
+            animation: bouquet-bubble-float var(--bbd) ease-in-out infinite;
+            animation-delay: var(--bbdelay);
+        }
+
+        @keyframes bouquet-bubble-float {
+            0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+            25% { opacity: 0.9; }
+            100% { transform: translate(calc(-50% + var(--bbx)), calc(-50% + var(--bby))) scale(1.4) rotate(var(--bbr)); opacity: 0; }
+        }
+
+        .part5-end-container {
+            position: absolute;
+            bottom: 4%;
+            right: 4%;
+            z-index: 100;
+        }
+
+        .end-celebration-btn {
+            padding: 10px 25px;
+            background: rgba(255, 71, 126, 0.8);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .end-celebration-btn:hover {
+            background: #ff477e;
+            transform: scale(1.05);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .envelope-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 10000000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .envelope-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .envelope-box {
+            position: relative;
+            width: 90vw;
+            max-width: 700px;
+            height: 80vh;
+            max-height: 600px;
+            background: #fff5f7;
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 40px rgba(255, 182, 193, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: scale(0.8);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .envelope-overlay.active .envelope-box {
+            transform: scale(1);
+        }
+
+        .letter-content {
+            flex: 1;
+            padding: 50px 40px;
+            overflow-y: auto;
+            color: #4a3b3c;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            text-align: left;
+        }
+
+        .letter-content p {
+            margin-bottom: 20px;
+            white-space: pre-line;
+            text-indent: 15px;
+        }
+
+        .close-envelope-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: #e8a5b0;
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 101;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .close-envelope-btn:hover {
+            background: #d68f9c;
+            transform: scale(1.1);
+        }
+
+        .letter-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .letter-content::-webkit-scrollbar-track {
+            background: #faeaed;
+        }
+        .letter-content::-webkit-scrollbar-thumb {
+            -webkit-border-radius: 4px;
+            border-radius: 4px;
+            background: #e8a5b0; 
+        }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 4, 18, 0.85); backdrop-filter: blur(8px);
+            z-index: 9999999; display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+        }
+        .modal-paper {
+            background: #fffdf5; color: #2d221c; width: 540px; max-width: 90%;
+            padding: 40px; border-radius: 14px; box-shadow: 0 25px 55px rgba(0,0,0,0.6);
+            transform: translateY(50px) scale(0.9); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2);
+            text-align: left; line-height: 1.7; border-left: 6px solid #ff477e; position: relative;
+            max-height: 85vh; overflow-y: auto; font-size: 1.05rem;
+        }
+        .modal-paper h3 { margin-bottom: 20px; color: #ff477e; font-size: 1.6rem; font-weight: 700; border-bottom: 1px dashed rgba(255,71,126,0.2); padding-bottom: 8px;}
+        .modal-paper p { margin-bottom: 15px; text-indent: 10px; }
+        .close-hint { margin-top: 30px; text-align: center; color: #888; font-size: 0.85rem; font-style: italic; border-top: 1px solid #eee; padding-top: 15px; }
+
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-overlay.active .modal-paper { transform: translateY(0) scale(1); }
+
+        .center-flower { width: 120px; height: 120px; background: #ff477e; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 40px; box-shadow: 0 0 30px #ff477e; }
+        .fade-out { opacity: 0; pointer-events: none; }
+        .fade-in { opacity: 1 !important; }
+
+        @media (max-width: 950px) {
+            .part5-end-container { bottom: 2%; right: 5%; }
+            .bouquet-img { width: 340px; }
+            .bouquet-container::before { width: 380px; height: 380px; }
+            .envelope-box { width: 95vw; height: 85vh; }
+            .letter-content { padding: 30px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="celebrationSong" src="VID_20260706_180840.mp3" loop></audio>
+
+    <canvas id="trailCanvas"></canvas>
+
+    <div class="intro-container" id="intro">
+        <h1 class="greeting-title">To my Dearest Love...</h1>
+        <div class="rose-container">
+            <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div><div class="petal p4"></div>
+            <div class="stem"></div><div class="leaf"></div>
+        </div>
+        <div class="btn-wrapper" id="btnWrapper">
+            <button class="celebration-btn" onclick="goToCelebration(this)">Click here my love</button>
+        </div>
+    </div>
+
+    <div id="dashboard">
+        <canvas id="emojiCanvas"></canvas>
+
+        <div class="dashboard-header">
+            <h1 style="color: #ff85a1; font-size: 2.5rem; text-shadow: 0 0 15px rgba(255,133,161,0.3);">Our Special Celebration ❤️</h1>
+            <p style="color: #bbb; margin-top: 8px;">Tap a dynamic floating capsule to look inside...</p>
+        </div>
+        
+        <div class="dashboard-layout">
+            <div class="column left-col">
+                <div class="float-wrapper">
+                    <div class="letter-card" onclick="openLetter(1)">
+                        <span class="card-icon">🎁</span>
+                        <span class="card-title">My Sanctuary</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="center-col">
+                <div class="center-flower">🌸</div>
+                <div class="next-btn-container">
+                    <button class="next-part-btn" onclick="goToPartFive()">Next Part →</button>
+                </div>
+            </div>
+
+            <div class="column right-col">
+                <div class="float-wrapper">
+                    <div class="letter-card" onclick="openLetter(2)">
+                        <span class="card-icon">💖</span>
+                        <span class="card-title">Vulnerability</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PART 5 SCREEN -->
+    <div id="part5">
+        <canvas id="galaxyCanvas5"></canvas>
+
+        <div class="bouquet-container" id="openPart5EnvelopeBtn">
+            <span class="bouquet-bubble" style="--bbx: -160px; --bby: -140px; --bbd: 3.2s; --bbdelay: 0s; --bbr: -15deg;">💖</span>
+            <span class="bouquet-bubble" style="--bbx: 170px; --bby: -130px; --bbd: 2.8s; --bbdelay: 0.6s; --bbr: 20deg;">🌸</span>
+            <span class="bouquet-bubble" style="--bbx: -190px; --bby: 60px; --bbd: 3.5s; --bbdelay: 1.2s; --bbr: 10deg;">✨</span>
+            <span class="bouquet-bubble" style="--bbx: 180px; --bby: 70px; --bbd: 3.0s; --bbdelay: 0.3s; --bbr: -25deg;">❤️</span>
+            <span class="bouquet-bubble" style="--bbx: -90px; --bby: -190px; --bbd: 2.6s; --bbdelay: 1.5s; --bbr: 30deg;">💕</span>
+            <span class="bouquet-bubble" style="--bbx: 100px; --bby: -180px; --bbd: 3.4s; --bbdelay: 0.9s; --bbr: -10deg;">🌹</span>
+            <span class="bouquet-bubble" style="--bbx: 0px; --bby: 170px; --bbd: 2.9s; --bbdelay: 0.4s; --bbr: 5deg;">💘</span>
+
+            <img src="Adobe Express - file.png" alt="Bouquet of Flowers" class="bouquet-img">
+            <div class="click-hint">Click the bouquet</div>
+        </div>
+
+        <div class="part5-end-container">
+            <button class="end-celebration-btn" onclick="closeWebsite()">End ×</button>
+        </div>
+
+        <div class="envelope-overlay" id="part5EnvelopeOverlay">
+            <div class="envelope-box">
+                <button class="close-envelope-btn" id="part5CloseBtn">&times;</button>
+                
+                <div class="letter-content">
+                    <p>Looking back at everything we've been through, I am just so deeply grateful for every single day I get to spend loving you. Two months might just seem like a chapter to some, but to us, it’s proof that no matter what comes our way, we choose each other.</p>
+                    
+                    <p>I truly hope that all our simple monthsarries turn into wonderful anniversaries, and that all our months turn into years, and eventually into a lifetime and forever by your side. Every single day with you feels like a gift, and I look forward to creating countless more memories, laughing at our silliest moments, and holding your hand through everything life has to offer.</p>
+                    
+                    <p>Thank you for being my safe space, my happiness, and my favorite person. Here's to more days filled with love, more monthsarries to celebrate, and a forever that belongs only to you and me. I love you so much, baby!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="letterModal" onclick="closeLetter()">
+        <div class="modal-paper" onclick="event.stopPropagation()">
+            <h3 id="modalTitle">Letter Title</h3>
+            <div id="modalContent">Letter text content goes here...</div>
+            <div class="close-hint">Click anywhere outside this paper to close</div>
+        </div>
+    </div>
+
+    <script>
+        const letterData = {
+            1: { 
+                title: "My Sanctuary 🎁", 
+                text: "<p>Happy 2nd monthsarry to us babyy! i never thought we’d even go this far in our relationship because of how people tried ruining us so many times, the way you stayed by my side means a lot to me.</p><p>dun sa part palang na willing kang mag stay sakin kahit alam mong nasasaktan kana panalo nako eh. the way you chose to change and be better for me, hindi nako makakahanap ng katulad mo baby.</p><p>i really hope our monthsarries turns into anniversaries because you are the only person i see and want to have a future with. i love you more than words can say, and i love you more than i can show. once again my love, happy monthsarryyy</p>" 
+            },
+            2: { 
+                title: "Vulnerability & Trust 💖", 
+                text: "<p>Let me show you that you're worth every risk. I know we're still young and maybe we don't have everything figured out yet, but one thing I'm sure of is how I feel about you. Hindi ko alam kung ano ang mangyayari sa future, pero alam ko na ikaw yung taong gusto kong piliin araw-araw. I'm not here for a temporary feeling, and I'm not here just for the good days. I'm here because out of everyone I could've chosen, ikaw yung taong palagi kong gustong balikan.</p><p>I want to understand every part of you, your moods, your attitude, your silence, your overthinking, your good days and even your bad ones. Because loving someone isn't just about loving the easy parts, it's also about staying when things get difficult. Alam kong darating yung mga araw na mapapagod tayo, magkakaroon ng misunderstandings, at may mga pagkakataong hindi natin agad maiintindihan ang isa't isa. Pero kahit ganon, I don't want giving up to be the first option. I want to be the person who stays. Yung taong pipili sayo kahit sa mga araw na hindi mo kayang piliin ang sarili mo.</p><p>Because the truth is, you make life feel a little less scary. Kapag nandiyan ka, parang gumagaan yung lahat. With you, everything feels softer, calmer, and somehow more like home. Nakikita ko yung mga parte mo na pilit mong tinatago, your fears, your insecurities, your wounds, and the things you don't tell everyone. And instead of making me love you less, those things make me appreciate you even more. You don't have to pretend with me. You don't have to be strong all the time. You can cry, break down, make mistakes, get angry, overthink, and have days where you're not okay. Hindi mo kailangang maging perfect para piliin kita.</p><p>Because at the end of the day, I'll still choose you. Not because you're perfect, not because you're easy to love, but because you're you. And no matter what happens, I want you to know that my intentions are genuine. I'll do my best to understand you, respect you, support you, and love you in the way you deserve. Maybe I can't promise a perfect relationship, but I can promise that my feelings for you are real. And as long as you'll let me, I'll keep choosing I want to be the person who stays.</p>" 
+            }
+        };
+
+        let audioCtx = null;
+        let ambientInterval = null;
+        let galaxyActive5 = false;
+
+        function closeWebsite() {
+            window.close();
+        }
+
+        function startAmbientEmojis() {
+            const wrapper = document.getElementById('btnWrapper');
+            const pool = ['❤️', '💖', '🌸', '✨', '💕', '🌹'];
+            if(ambientInterval) clearInterval(ambientInterval);
+            ambientInterval = setInterval(() => {
+                const span = document.createElement('span');
+                span.className = 'ambient-emoji';
+                span.innerText = pool[Math.floor(Math.random() * pool.length)];
+                const xDist = (Math.random() - 0.5) * 280; 
+                const yDist = -(120 + Math.random() * 150); 
+                const speed = 2.5 + Math.random() * 2; 
+                const rotation = (Math.random() - 0.5) * 90;
+                span.style.setProperty('--x', `${xDist}px`);
+                span.style.setProperty('--y', `${yDist}px`);
+                span.style.setProperty('--d', `${speed}s`);
+                span.style.setProperty('--r', `${rotation}deg`);
+                wrapper.appendChild(span);
+                setTimeout(() => { span.remove(); }, speed * 1000);
+            }, 380); 
+        }
+        window.addEventListener('DOMContentLoaded', startAmbientEmojis);
+
+        function initAudio() {
+            const song = document.getElementById('celebrationSong');
+            if (song) { song.play().catch(err => console.log(err)); }
+        }
+
+        function goToCelebration(btnElement) {
+            initAudio();
+            clearInterval(ambientInterval); 
+            const burstEmojis = ['❤️', '💖', '🌸', '✨', '💕', '🌹', '👩‍❤️‍👨', '💘'];
+            const wrapper = document.getElementById('btnWrapper');
+            for (let i = 0; i < 28; i++) {
+                const span = document.createElement('span');
+                span.className = 'burst-emoji';
+                span.innerText = burstEmojis[Math.floor(Math.random() * burstEmojis.length)];
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 130 + Math.random() * 220; 
+                const x = Math.cos(angle) * distance; const y = Math.sin(angle) * distance;
+                const rotation = Math.random() * 360;
+                span.style.setProperty('--x', `${x}px`); span.style.setProperty('--y', `${y}px`); span.style.setProperty('--r', `${rotation}deg`);
+                wrapper.appendChild(span);
+                setTimeout(() => { span.remove(); }, 900);
+            }
+            setTimeout(() => {
+                document.getElementById('intro').classList.add('fade-out');
+                setTimeout(() => {
+                    document.getElementById('intro').style.display = 'none';
+                    const dash = document.getElementById('dashboard');
+                    dash.style.display = 'block';
+                    setTimeout(() => { dash.classList.add('fade-in'); initDashboardBackground(); }, 100);
+                }, 800);
+            }, 450);
+        }
+
+        function openLetter(id) {
+            document.getElementById('modalTitle').innerText = letterData[id].title;
+            document.getElementById('modalContent').innerHTML = letterData[id].text;
+            document.getElementById('letterModal').classList.add('active');
+        }
+
+        function closeLetter() { document.getElementById('letterModal').classList.remove('active'); }
+
+        function goToPartFive() {
+            initAudio();
+            document.getElementById('dashboard').classList.remove('fade-in');
+            document.getElementById('dashboard').classList.add('fade-out');
+            setTimeout(() => {
+                document.getElementById('dashboard').style.display = 'none';
+                const p5 = document.getElementById('part5');
+                p5.style.display = 'flex';
+                setTimeout(() => { 
+                    p5.classList.add('fade-in'); 
+                    galaxyActive5 = true;
+                    initGalaxyBackground('galaxyCanvas5', () => galaxyActive5);
+                }, 50);
+            }, 800);
+        }
+
+        const openPart5Btn = document.getElementById('openPart5EnvelopeBtn');
+        const closePart5Btn = document.getElementById('part5CloseBtn');
+        const overlayPart5 = document.getElementById('part5EnvelopeOverlay');
+
+        if (openPart5Btn && closePart5Btn && overlayPart5) {
+            openPart5Btn.addEventListener('click', (e) => {
+                overlayPart5.classList.add('active');
+            });
+
+            closePart5Btn.addEventListener('click', () => {
+                overlayPart5.classList.remove('active');
+            });
+
+            overlayPart5.addEventListener('click', (e) => {
+                if (e.target === overlayPart5) {
+                    overlayPart5.classList.remove('active');
+                }
+            });
+        }
+
+        (function initMagicCursor() {
+            const canvas = document.getElementById('trailCanvas');
+            const ctx = canvas.getContext('2d');
+            function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+            window.addEventListener('resize', resize); resize();
+            let sparkles = [];
+            class Sparkle {
+                constructor(x, y) {
+                    this.x = x; this.y = y;
+                    this.size = Math.random() * 4 + 2;
+                    this.speedX = (Math.random() - 0.5) * 2.5;
+                    this.speedY = (Math.random() - 0.5) * 2.5 - 0.5;
+                    this.alpha = 1; this.decay = Math.random() * 0.02 + 0.02;
+                    this.color = Math.random() > 0.5 ? `hsla(343, 100%, 75%, ` : `hsla(45, 100%, 70%, `;
+                }
+                update() { this.x += this.speedX; this.y += this.speedY; this.alpha -= this.decay; return this.alpha > 0; }
+                draw() {
+                    ctx.save(); ctx.globalAlpha = this.alpha;
+                    ctx.fillStyle = this.color + this.alpha + ')';
+                    ctx.shadowBlur = 6; ctx.shadowColor = '#ff477e';
+                    ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill(); ctx.restore();
+                }
+            }
+            window.addEventListener('mousemove', (e) => { sparkles.push(new Sparkle(e.clientX, e.clientY)); });
+            window.addEventListener('touchmove', (e) => { if (e.touches.length > 0) sparkles.push(new Sparkle(e.touches[0].clientX, e.touches[0].clientY)); }, { passive: true });
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                sparkles = sparkles.filter(s => { const active = s.update(); if (active) s.draw(); return active; });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        })();
+
+        function initDashboardBackground() {
+            const canvas = document.getElementById('emojiCanvas');
+            const ctx = canvas.getContext('2d');
+            function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+            window.addEventListener('resize', resize); resize();
+            const emojis = ['🌸', '💖', '❤️', '🌹', '💕', '🌷', '💘'];
+            let pool = [];
+            class FloatingEmoji {
+                constructor() { this.reset(); this.y = Math.random() * canvas.height; }
+                reset() {
+                    this.x = Math.random() * canvas.width; this.y = canvas.height + 40;
+                    this.char = emojis[Math.floor(Math.random() * emojis.length)];
+                    this.speed = Math.random() * 1.2 + 0.6; this.size = Math.random() * 15 + 18;
+                    this.opacity = 0; this.fadeSpeed = 0.015;
+                    this.wobble = Math.random() * 5; this.wobbleSpeed = Math.random() * 0.02 + 0.01;
+                }
+                update() {
+                    this.y -= this.speed; this.wobble += this.wobbleSpeed; this.x += Math.sin(this.wobble) * 0.5;
+                    if (this.y < canvas.height - 50 && this.opacity < 0.6) this.opacity += this.fadeSpeed;
+                    if (this.y < 100) this.opacity -= this.fadeSpeed;
+                    if (this.y < -40 || (this.opacity <= 0 && this.y < 200)) this.reset();
+                }
+                draw() {
+                    ctx.save(); ctx.globalAlpha = Math.max(0, this.opacity);
+                    ctx.font = `${this.size}px sans-serif`; ctx.fillText(this.char, this.x, this.y); ctx.restore();
+                }
+            }
+            for(let i=0; i<30; i++) pool.push(new FloatingEmoji());
+            function run() {
+                if (document.getElementById('dashboard').style.display === 'none') return;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                pool.forEach(item => { item.update(); item.draw(); });
+                requestAnimationFrame(run);
+            }
+            run();
+        }
+
+        function initGalaxyBackground(canvasId, isActiveFunc) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+            window.addEventListener('resize', resize); resize();
+
+            let stars = [];
+            let nebulae = [];
+
+            class Star {
+                constructor() {
+                    this.reset();
+                }
+                reset() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.size = Math.random() * 2 + 0.5;
+                    this.baseAlpha = Math.random() * 0.7 + 0.3;
+                    this.alpha = this.baseAlpha;
+                    this.twinkleSpeed = Math.random() * 0.03 + 0.01;
+                    this.twinkleDir = Math.random() > 0.5 ? 1 : -1;
+                    this.color = Math.random() > 0.8 ? '#ffb3c1' : (Math.random() > 0.6 ? '#c77dff' : '#ffffff');
+                }
+                update() {
+                    this.alpha += this.twinkleSpeed * this.twinkleDir;
+                    if (this.alpha > 1) { this.alpha = 1; this.twinkleDir = -1; }
+                    else if (this.alpha < 0.2) { this.alpha = 0.2; this.twinkleDir = 1; }
+                }
+                draw() {
+                    ctx.save();
+                    ctx.globalAlpha = this.alpha;
+                    ctx.fillStyle = this.color;
+                    ctx.shadowBlur = this.size * 3;
+                    ctx.shadowColor = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            class NebulaCloud {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.radius = Math.random() * 250 + 150;
+                    this.color = Math.random() > 0.5 ? 'rgba(123, 44, 191, 0.12)' : 'rgba(255, 71, 126, 0.08)';
+                    this.vx = (Math.random() - 0.5) * 0.2;
+                    this.vy = (Math.random() - 0.5) * 0.2;
+                }
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    if (this.x < -this.radius) this.x = canvas.width + this.radius;
+                    if (this.x > canvas.width + this.radius) this.x = -this.radius;
+                    if (this.y < -this.radius) this.y = canvas.height + this.radius;
+                    if (this.y > canvas.height + this.radius) this.y = -this.radius;
+                }
+                draw() {
+                    ctx.save();
+                    let gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                    gradient.addColorStop(0, this.color);
+                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            for (let i = 0; i < 5; i++) nebulae.push(new NebulaCloud());
+            for (let i = 0; i < 180; i++) stars.push(new Star());
+
+            function runGalaxy() {
+                if (!isActiveFunc()) return;
+                ctx.fillStyle = '#05020a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                nebulae.forEach(n => { n.update(); n.draw(); });
+                stars.forEach(s => { s.update(); s.draw(); });
+
+                requestAnimationFrame(runGalaxy);
+            }
+            runGalaxy();
+        }
+    </script>
+</body>
+</html>
